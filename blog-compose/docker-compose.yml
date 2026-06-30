@@ -1,0 +1,24 @@
+services:
+  nginx:
+    image: nginx:alpine
+    container_name: blog-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ~/blog-static:/usr/share/nginx/html:ro
+      - ~/certs:/etc/nginx/certs:ro
+      - ~/nginx-config/default.conf:/etc/nginx/conf.d/default.conf:ro
+    restart: always
+
+  glances:
+    image: nicolargo/glances:latest
+    container_name: glances
+    pid: "host"
+    ports:
+      - "8080:61208"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - GLANCES_OPT=-w
+    restart: always
