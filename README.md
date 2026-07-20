@@ -43,6 +43,7 @@
 
 | 文件 | 说明 |
 |------|------|
+| `k8s/flask-api.yaml` | Flask API 的 K8s Deployment + Service |
 | `docker-compose.yml` | Nginx + Glances 容器编排 |
 | `Dockerfile` | 博客自定义镜像（基于 nginx:alpine） |
 | `nginx-config/default.conf` | Nginx 配置：HTTP→HTTPS 跳转，SSL 证书 |
@@ -57,7 +58,7 @@
 
 `Linux` `Docker` `Docker Compose` `Dockerfile` `Nginx` `HTTPS/SSL`
 `Shell Script` `Python` `GitHub Actions` `CI/CD` `cron` `fail2ban`
-`阿里云 ECS` `阿里云 ACR` `Git`
+`阿里云 ECS` `阿里云 ACR` `Kubernetes` `k3s` `Git`
 
 ## 相关链接
 
