@@ -1,0 +1,93 @@
+# ============================================
+# 监控服务 docker-compose
+# Prometheus + Grafana + node_exporter + nginx-exporter
+# ============================================
+# 使用方法：
+#   docker compose up -d
+#   docker compose ps
+#   docker compose logs -f
+# ============================================
+
+services:
+
+  # ── 1. Prometheus 指标采集 ─────────────────
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      # 挂载配置文件
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
+      # 持久化时序数据（容器重启不丢失）
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=15d'   # 保留 15 天数据
+      - '--web.enable-lifecycle'               # 允许热重载配置
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - monitoring
+
+  # ── 2. Node Exporter 主机指标 ─────────────
+  node_exporter:
+    image: prom/node-exporter:latest
+    container_name: node_exporter
+    restart: unless-stopped
+    pid: "host"           # 访问宿主机进程信息
+    network_mode: "host"  # 使用宿主机网络（需要读 /proc 等）
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--path.rootfs=/rootfs'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+
+  # ── 3. Nginx Exporter ─────────────────────
+  nginx-exporter:
+    image: nginx/nginx-prometheus-exporter:latest
+    container_name: nginx-exporter
+    restart: unless-stopped
+    ports:
+      - "9113:9113"
+    command:
+      # 通过宿主机 IP 访问 nginx 的 stub_status
+      - '-nginx.scrape-uri=http://host.docker.internal/nginx_status'
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - monitoring
+
+  # ── 4. Grafana 可视化面板 ─────────────────
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin        # 首次登录后记得改密码
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/datasources/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml:ro
+    networks:
+      - monitoring
+
+# ── 持久化卷 ──────────────────────────────
+volumes:
+  prometheus_data:
+  grafana_data:
+
+# ── Docker 网络 ────────────────────────────
+networks:
+  monitoring:
+    driver: bridge

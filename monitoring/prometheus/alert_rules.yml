@@ -1,0 +1,75 @@
+# ============================================
+# Prometheus 告警规则
+# 项目：ops-portfolio 监控体系
+# ============================================
+
+groups:
+  - name: basic_alerts
+    rules:
+
+      # ── 规则 1：实例宕机 ──────────────────
+      - alert: InstanceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "🚨 监控目标宕机：{{ $labels.instance }}"
+          description: "{{ $labels.job }} 目标的 up 指标为 0，已持续 1 分钟。请立即检查服务状态。"
+
+      # ── 规则 2：CPU 使用率过高 ────────────
+      - alert: HighCPUUsage
+        expr: |
+          100 - (
+            avg by(instance) (
+              rate(node_cpu_seconds_total{mode="idle"}[5m])
+            ) * 100
+          ) > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "⚠️ CPU 使用率 > 80%：{{ $labels.instance }}"
+          description: "当前 CPU 使用率 {{ $value | humanize }}%，已持续 5 分钟。请检查是否有异常进程。"
+
+      # ── 规则 3：内存使用率过高 ────────────
+      - alert: HighMemoryUsage
+        expr: |
+          (1 - (
+            node_memory_MemAvailable_bytes
+            / node_memory_MemTotal_bytes
+          )) * 100 > 90
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "⚠️ 内存使用率 > 90%：{{ $labels.instance }}"
+          description: "当前内存使用率 {{ $value | humanize }}%，已持续 5 分钟。可用内存仅剩 {{ $value | humanize }}%。"
+
+      # ── 规则 4：磁盘使用率过高 ────────────
+      - alert: HighDiskUsage
+        expr: |
+          (1 - (
+            node_filesystem_avail_bytes{mountpoint="/", fstype!="tmpfs"}
+            / node_filesystem_size_bytes{mountpoint="/", fstype!="tmpfs"}
+          )) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "⚠️ 磁盘使用率 > 85%：{{ $labels.instance }}"
+          description: "根分区磁盘使用率 {{ $value | humanize }}%，已持续 5 分钟。请清理磁盘或扩容。"
+
+      # ── 规则 5：磁盘空间不足（严重）───────
+      - alert: DiskFull
+        expr: |
+          (1 - (
+            node_filesystem_avail_bytes{mountpoint="/", fstype!="tmpfs"}
+            / node_filesystem_size_bytes{mountpoint="/", fstype!="tmpfs"}
+          )) * 100 > 95
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "🚨 磁盘即将耗尽：{{ $labels.instance }}"
+          description: "根分区磁盘使用率已达 {{ $value | humanize }}%，必须立即处理！"

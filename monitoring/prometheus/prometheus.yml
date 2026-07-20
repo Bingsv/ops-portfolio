@@ -1,0 +1,40 @@
+# ============================================
+# Prometheus 主配置文件
+# 项目：ops-portfolio 监控体系
+# ============================================
+
+global:
+  scrape_interval: 15s      # 每 15 秒采集一次指标
+  evaluation_interval: 15s  # 每 15 秒评估一次告警规则
+  # 给所有指标打上项目标签
+  external_labels:
+    project: ops-portfolio
+    server: ecs-hangzhou
+
+# ── 告警规则文件 ──────────────────────────
+rule_files:
+  - "alert_rules.yml"
+
+# ── 抓取目标配置 ──────────────────────────
+scrape_configs:
+
+  # 1. Prometheus 自身监控
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # 2. 主机指标（node_exporter）
+  #    采集：CPU、内存、磁盘、网络、系统负载等
+  - job_name: 'node'
+    static_configs:
+      - targets: ['host.docker.internal:9100']
+        labels:
+          host: 'ecs-hangzhou'
+
+  # 3. Nginx 指标（nginx-prometheus-exporter）
+  #    采集：连接数、请求数、请求速率等
+  - job_name: 'nginx'
+    static_configs:
+      - targets: ['nginx-exporter:9113']
+        labels:
+          service: 'blog-nginx'
