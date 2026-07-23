@@ -1,0 +1,23 @@
+services:
+  mysql-master:
+    image: mysql:8.0
+    container_name: mysql-master
+    ports: ['3306:3306']
+    environment:
+      MYSQL_ROOT_PASSWORD: Admin@123
+      MYSQL_DATABASE: opsdb
+    volumes:
+      - ./master/data:/var/lib/mysql
+      - ./master/conf/my.cnf:/etc/mysql/conf.d/my.cnf:ro
+    restart: unless-stopped
+
+  mysql-slave:
+    image: mysql:8.0
+    container_name: mysql-slave
+    ports: ['3307:3306']
+    environment:
+      MYSQL_ROOT_PASSWORD: Admin@123
+    volumes:
+      - ./slave/data:/var/lib/mysql
+      - ./slave/conf/my.cnf:/etc/mysql/conf.d/my.cnf:ro
+    restart: unless-stopped
